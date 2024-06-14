@@ -1,7 +1,27 @@
 #!/bin/bash
 
+if [ ! -f ".env" ]; then
+    echo ".env file does not exist."
+    exit
+fi
+
+REQURIED_ENVS=(
+    MAILU_DOMAIN
+    MAILU_HOSTNAMES
+)
+
+source .env
+for env in "${REQURIED_ENVS[@]}"; do
+    if [ -z "${!env}" ]; then
+        echo "$env is not set."
+        exit
+    fi
+done
+
+
 function generate_password() {
-    tr -dc A-Za-z0-9 </dev/urandom | head -c 13
+    local length=${1:-13}
+    tr -dc A-Za-z0-9 </dev/urandom | head -c $length
     echo ''
 }
 
@@ -49,8 +69,8 @@ echo_run() {
 }
 
 function gcf() {
-    export GCF_ED='$'
-    envsubst <$1
+    export GCF_ED="$"
+    envsubst < $1
 }
 
 function gcfc() {
@@ -98,38 +118,70 @@ function ln_nginx() {
     echo_run "ln -s /etc/nginx/sites-available/$1.conf /etc/nginx/sites-enabled/"
 }
 
+function join_array() {
+    local IFS="$1"
+    shift
+    echo "$*"
+}
+
 # ACTIONS
 
 server_initial_setup() {
     echo_run "ln -fs /usr/share/zoneinfo/Asia/Tehran /etc/localtime"
     echo_run "dpkg-reconfigure -f noninteractive tzdata"
     echo_run "apt update -y"
-    echo_run "apt install -y apg tmux vim net-tools docker.io docker-compose"
+    echo_run "apt install -y apg tmux vim net-tools docker.io"
+
+    DOCKER_COMPOSE_VERSION=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*\d')
+    DOCKER_COMPOSE_DESTINATION="/usr/local/bin/docker-compose"
+    echo_run "curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m) -o $DOCKER_COMPOSE_DESTINATION"
+    echo_run "chmod 755 $DOCKER_COMPOSE_DESTINATION"
+
     echo_run "apt full-upgrade -y"
     echo_run "apt autoremove -y"
     echo_run "sleep 5"
     echo_run "reboot"
 }
 
+server_os_upgrade() {
+    change_config Prompt normal /etc/update-manager/release-upgrades
+    echo "Close script and run this command in terminal:"
+    echo "do-release-upgrade"
+}
+
 _add_mailu_admin() {
     local username=$1
     local password=$2
     dcd mailu
-    source mailu.env
-    echo_run "docker-compose exec admin flask mailu admin $username $DOMAIN $password"
+    echo_run "docker-compose exec admin flask mailu admin $username $MAILU_DOMAIN $password"
 }
 
 install_mailu() {
-    MAILU_ADMIN_USERNAME="${MAILU_ADMIN_USERNAME:-admin}"
-    MAILU_ADMIN_PASSWORD="${MAILU_ADMIN_PASSWORD:-$(generate_password)}"
+    MAILU_ADMIN_PASSWORD="$(generate_password)"
+    MAILU_WEBSITE="https://$MAILU_DOMAIN"
+    MAILU_SECRET_KEY=$(generate_password 16)
+    MAILU_POSTMASTER=${MAILU_POSTMASTER:-"admin"}
+    DOCKER_COMPOSE_ENVS=(
+        MAILU_HOSTNAMES
+        MAILU_DOMAIN
+        MAILU_POSTMASTER
+        MAILU_SECRET_KEY
+        MAILU_WEBSITE
+        MAILU_HTTP_PORT
+        MAILU_HTTPS_PORT
+    )
 
-    nginx_config=$(gcfc mailu/nginx.conf)
     docker_config=$(gcfc mailu/docker-compose.yml)
+    nginx_config=$(gcfc mailu/nginx.conf)
+
     dcd mailu
     cpc mailu/docker-compose.yml
     cpc mailu/mailu.env
+    for env in "${DOCKER_COMPOSE_ENVS[@]}"; do
+        echo "$env=${!env}" >> mailu.env
+    done
     echo_run "docker-compose up -d"
-    _add_mailu_admin $MAILU_ADMIN_USERNAME $MAILU_ADMIN_PASSWORD
+    _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
 }
 
 add_mailu_admin() {
@@ -146,6 +198,7 @@ add_mailu_admin() {
 
 ACTIONS=(
     server_initial_setup
+    server_os_upgrade
     install_mailu
     add_mailu_admin
 )

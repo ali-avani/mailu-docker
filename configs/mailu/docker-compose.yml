@@ -18,8 +18,8 @@ services:
             options:
                 tag: mailu-front
         ports:
-            - "80:80"
-            - "443:443"
+            - "${MAILU_HTTP_PORT:-880}:80"
+            - "${MAILU_HTTPS_PORT:-8443}:443"
             - "25:25"
             - "465:465"
             - "587:587"
