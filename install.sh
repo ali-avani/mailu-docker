@@ -18,6 +18,8 @@ for env in "${REQURIED_ENVS[@]}"; do
     fi
 done
 
+export MAILU_HTTP_PORT=${MAILU_HTTP_PORT:-880}
+export MAILU_HTTPS_PORT=${MAILU_HTTPS_PORT:-8443}
 
 function generate_password() {
     local length=${1:-13}
@@ -115,6 +117,7 @@ function get_subdomains() {
 }
 
 function ln_nginx() {
+    echo_run "rm -f /etc/nginx/sites-enabled/$1.conf"
     echo_run "ln -s /etc/nginx/sites-available/$1.conf /etc/nginx/sites-enabled/"
 }
 
@@ -156,7 +159,17 @@ _add_mailu_admin() {
     echo_run "docker-compose exec admin flask mailu admin $username $MAILU_DOMAIN $password"
 }
 
+install_nginx() {
+    echo_run "apt install nginx -y"
+    echo_run "systemctl restart nginx"
+}
+
 install_mailu() {
+    if [ ! -f /etc/nginx/sites-available/default ]; then
+        echo "Nginx is not installed. Please install it first."
+        return
+    fi
+
     MAILU_ADMIN_PASSWORD="$(generate_password)"
     MAILU_WEBSITE="https://$MAILU_DOMAIN"
     MAILU_SECRET_KEY=$(generate_password 16)
@@ -171,17 +184,28 @@ install_mailu() {
         MAILU_HTTPS_PORT
     )
 
-    docker_config=$(gcfc mailu/docker-compose.yml)
-    nginx_config=$(gcfc mailu/nginx.conf)
-
     dcd mailu
     cpc mailu/docker-compose.yml
+    cpc mailu/nginx.conf
+    cpc mailu/proxy.conf
+    cpc mailu/ssl.conf
     cpc mailu/mailu.env
+
+    export MAILU_DOMAIN
+    nginx_config=$(gcf nginx.conf)
+
     for env in "${DOCKER_COMPOSE_ENVS[@]}"; do
-        echo "$env=${!env}" >> mailu.env
+        key="${env#MAILU_}"
+        echo "$key=${!env}" >> mailu.env
     done
+
     echo_run "docker-compose up -d"
     _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
+    echo_run "gcf nginx.conf > /etc/nginx/sites-available/mail.conf"
+    ln_nginx mail
+    echo_run "cp ssl.conf /etc/nginx"
+    echo_run "cp proxy.conf /etc/nginx"
+    echo_run "systemctl restart nginx"
 }
 
 add_mailu_admin() {
@@ -199,6 +223,7 @@ add_mailu_admin() {
 ACTIONS=(
     server_initial_setup
     server_os_upgrade
+    install_nginx
     install_mailu
     add_mailu_admin
 )
