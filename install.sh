@@ -111,18 +111,43 @@ server_initial_setup() {
     echo_run "reboot"
 }
 
-function install_mailu {
+_add_mailu_admin() {
+    local username=$1
+    local password=$2
+    dcd mailu
+    source mailu.env
+    echo_run "docker-compose exec admin flask mailu admin $username $DOMAIN $password"
+}
+
+install_mailu() {
+    MAILU_ADMIN_USERNAME="${MAILU_ADMIN_USERNAME:-admin}"
+    MAILU_ADMIN_PASSWORD="${MAILU_ADMIN_PASSWORD:-$(generate_password)}"
+
     nginx_config=$(gcfc mailu/nginx.conf)
     docker_config=$(gcfc mailu/docker-compose.yml)
     dcd mailu
     cpc mailu/docker-compose.yml
     cpc mailu/mailu.env
     echo_run "docker-compose up -d"
+    _add_mailu_admin $MAILU_ADMIN_USERNAME $MAILU_ADMIN_PASSWORD
+}
+
+add_mailu_admin() {
+    echo -n "Enter username: "
+    read MAILU_ADMIN_USERNAME
+
+    echo -n "Enter password: "
+    stty -echo
+    read MAILU_ADMIN_PASSWORD
+    stty echo
+
+    _add_mailu_admin $MAILU_ADMIN_USERNAME $MAILU_ADMIN_PASSWORD
 }
 
 ACTIONS=(
     server_initial_setup
     install_mailu
+    add_mailu_admin
 )
 
 while true; do
