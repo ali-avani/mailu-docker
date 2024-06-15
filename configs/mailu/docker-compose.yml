@@ -4,8 +4,9 @@ services:
         restart: always
         volumes:
             - "/mailu/redis:/data"
-        depends_on:
-            - resolver
+        networks:
+            - default
+            - webmail
         dns:
             - 192.168.203.254
 
@@ -18,8 +19,7 @@ services:
             options:
                 tag: mailu-front
         ports:
-            - "${HTTP_PORT:-880}:80"
-            - "${HTTPS_PORT:-8443}:443"
+            - "8080:80"
             - "25:25"
             - "465:465"
             - "587:587"
@@ -45,6 +45,8 @@ services:
         networks:
             default:
                 ipv4_address: 192.168.203.254
+        dns:
+            - 192.168.203.254
 
     admin:
         image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}admin:${MAILU_VERSION:-2.0}
@@ -103,8 +105,6 @@ services:
         restart: always
         networks:
             - noinet
-        depends_on:
-            - resolver
         dns:
             - 192.168.203.254
 
