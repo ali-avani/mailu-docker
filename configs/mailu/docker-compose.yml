@@ -4,14 +4,13 @@ services:
         restart: always
         volumes:
             - "/mailu/redis:/data"
-        networks:
-            - default
-            - webmail
+        depends_on:
+            - resolver
         dns:
             - 192.168.203.254
 
     front:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}nginx:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}nginx:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         logging:
@@ -19,14 +18,8 @@ services:
             options:
                 tag: mailu-front
         ports:
-            - "8080:80"
-            - "25:25"
-            - "465:465"
-            - "587:587"
-            - "110:110"
-            - "995:995"
-            - "143:143"
-            - "993:993"
+            - "$MAILU_HTTP_PORT:80"
+            - "$MAILU_HTTPS_PORT:443"
         networks:
             - default
             - webmail
@@ -39,17 +32,15 @@ services:
             - 192.168.203.254
 
     resolver:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}unbound:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}unbound:${GCF_ED}{MAILU_VERSION:-2.0}
         env_file: ./mailu.env
         restart: always
         networks:
             default:
                 ipv4_address: 192.168.203.254
-        dns:
-            - 192.168.203.254
 
     admin:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}admin:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}admin:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         logging:
@@ -66,7 +57,7 @@ services:
             - 192.168.203.254
 
     imap:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}dovecot:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}dovecot:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         logging:
@@ -83,7 +74,7 @@ services:
             - 192.168.203.254
 
     smtp:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}postfix:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}postfix:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         logging:
@@ -100,16 +91,18 @@ services:
             - 192.168.203.254
 
     oletools:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}oletools:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}oletools:${GCF_ED}{MAILU_VERSION:-2.0}
         hostname: oletools
         restart: always
         networks:
             - noinet
+        depends_on:
+            - resolver
         dns:
             - 192.168.203.254
 
     antispam:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}rspamd:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}rspamd:${GCF_ED}{MAILU_VERSION:-2.0}
         hostname: antispam
         restart: always
         env_file: ./mailu.env
@@ -133,7 +126,7 @@ services:
             - 192.168.203.254
 
     antivirus:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}clamav:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}clamav:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         volumes:
@@ -144,7 +137,7 @@ services:
             - 192.168.203.254
 
     fetchmail:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}fetchmail:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}fetchmail:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         volumes:
@@ -158,7 +151,7 @@ services:
             - 192.168.203.254
 
     webmail:
-        image: ${DOCKER_ORG:-ghcr.io/mailu}/${DOCKER_PREFIX:-}webmail:${MAILU_VERSION:-2.0}
+        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}webmail:${GCF_ED}{MAILU_VERSION:-2.0}
         restart: always
         env_file: ./mailu.env
         volumes:

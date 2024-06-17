@@ -18,8 +18,8 @@ for env in "${REQURIED_ENVS[@]}"; do
     fi
 done
 
-export MAILU_ADMIN_PORT=${MAILU_ADMIN_PORT:-880}
-export MAILU_MAIN_PORT=${MAILU_MAIN_PORT:-8443}
+export MAILU_HTTP_PORT=${MAILU_HTTP_PORT:-880}
+export MAILU_HTTPS_PORT=${MAILU_HTTPS_PORT:-8443}
 
 function generate_password() {
     local length=${1:-13}
@@ -187,12 +187,8 @@ install_mailu() {
         echo "Nginx is not installed. Please install it first."
         return
     fi
-    
-    if [ ! -f /etc/letsencrypt/live/$MAILU_DOMAIN/fullchain.pem ]; then
-        echo "SSL certificate not found. Please install it first."
-        return
-    fi
 
+    export MAILU_DOMAIN
     MAILU_ADMIN_PASSWORD="$(generate_password)"
     MAILU_WEBSITE="https://$MAILU_DOMAIN"
     MAILU_SECRET_KEY=$(generate_password 16)
@@ -203,28 +199,26 @@ install_mailu() {
         MAILU_POSTMASTER
         MAILU_SECRET_KEY
         MAILU_WEBSITE
-        MAILU_ADMIN_PORT
-        MAILU_MAIN_PORT
+        MAILU_HTTP_PORT
+        MAILU_HTTPS_PORT
     )
 
     dcd mailu
-    cpc mailu/docker-compose.yml
-    cpc mailu/mailu.conf
+    gcfc mailu/docker-compose.yml > docker-compose.yml
+    gcfc mailu/mailu.conf > mailu.conf
     cpc mailu/mailu.env
 
-    echo_run "mkdir -p /mailu/certs/letsencrypt/live/$MAILU_DOMAIN"
-    echo_run "cp /etc/letsencrypt/live/$MAILU_DOMAIN/{fullchain.pem,privkey.pem} /mailu/certs/letsencrypt/live/$MAILU_DOMAIN/"
-
-    export MAILU_DOMAIN
     for env in "${DOCKER_COMPOSE_ENVS[@]}"; do
         key="${env#MAILU_}"
         echo "$key=${!env}" >> mailu.env
     done
 
-    echo_run "gcf mailu.conf > /etc/nginx/sites-available/mailu.conf"
+    echo_run "cp mailu.conf /etc/nginx/sites-available/mailu.conf"
+    echo_run "cp /etc/letsencrypt/live/$MAILU_DOMAIN/fullchain.pem /etc/letsencrypt/live/$MAILU_DOMAIN/privkey.pem /mailu/certs"
     echo_run "docker-compose up -d"
     _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
-    ln_nginx mail
+    ln_nginx mailu
+
     echo_run "systemctl restart nginx"
 }
 
