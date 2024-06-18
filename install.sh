@@ -125,14 +125,6 @@ server_os_upgrade() {
     echo "Close script and run this command in terminal:"
     echo "do-release-upgrade"
 }
-
-_add_mailu_admin() {
-    local username=$1
-    local password=$2
-    dcd mailu
-    echo_run "docker-compose exec admin flask mailu admin $username $MAILU_DOMAIN $password"
-}
-
 install_ssl() {
     echo_run "apt install certbot python3-certbot-nginx -y"
     echo_run "certbot certonly -d $DOMAIN --email $CERTBOT_EMAIL --standalone --agree-tos --noninteractive"
@@ -142,6 +134,13 @@ install_nginx() {
     echo_run "apt install nginx python3-certbot-nginx -y"
     certbot_expand_nginx $DOMAIN
     echo_run "systemctl restart nginx"
+}
+
+_add_mailu_admin() {
+    local username=$1
+    local password=$2
+    dcd mailu
+    echo_run "docker-compose exec admin flask mailu admin $username $MAILU_DOMAIN $password"
 }
 
 install_mailu_nginx() {
