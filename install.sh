@@ -151,8 +151,6 @@ install_mailu_nginx() {
 }
 
 install_mailu() {
-    MAILU_ADMIN_PASSWORD="$(generate_password)"
-    MAILU_WEBSITE="https://$MAILU_DOMAIN"
     export MAILU_SECRET_KEY=$(generate_password 16)
 
     dcd mailu
@@ -166,6 +164,21 @@ install_mailu() {
     echo_run "docker compose exec admin flask mailu admin admin $MAIL_MAIN_DOMAIN $MAILU_ADMIN_PASSWORD"
 }
 
+create_mailu_user() {
+    MAILU_ADMIN_PASSWORD="$(generate_password)"
+
+    dcd mailu
+    echo_run "docker compose exec admin flask mailu admin admin $MAIL_MAIN_DOMAIN $MAILU_ADMIN_PASSWORD"
+    echo "Mailu admin password: $MAILU_ADMIN_PASSWORD"
+}
+
+configure_mailu() {
+    echo "Open https://$MAIL_DOMAIN/"
+    echo "Username: admin@$MAIL_MAIN_DOMAIN"
+    echo "Password: [password from create_mailu_user action]"
+    echo "Press [Sign in Admin] button"
+}
+
 ACTIONS=(
     server_initial_setup
     server_os_upgrade
@@ -173,6 +186,8 @@ ACTIONS=(
     install_nginx
     install_mailu_nginx
     install_mailu
+    create_mailu_user
+    configure_mailu
 )
 
 while true; do
