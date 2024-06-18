@@ -138,7 +138,7 @@ install_nginx() {
 }
 
 install_mailu_nginx() {
-    echo -e "Add the following DNS record to $(echo -n $DOMAIN | rev | cut -d"." -f1,2 | rev) DNS settings:"
+    echo -e "Add the following DNS record to $(echo -n $MAIL_DOMAIN | rev | cut -d"." -f1,2 | rev) DNS settings:"
     echo -e "\tType: CNAME"
     echo -e "\tName: $(get_subdomains $MAIL_DOMAIN)"
     echo -e "\tValue: $DOMAIN"
