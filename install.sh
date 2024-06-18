@@ -150,13 +150,6 @@ install_mailu_nginx() {
     echo "URL: https://$MAIL_DOMAIN"
 }
 
-_add_mailu_admin() {
-    local username=$1
-    local password=$2
-    dcd mailu
-    echo_run "docker compose exec admin flask mailu admin $username $MAIL_DOMAIN $password"
-}
-
 install_mailu() {
     MAILU_ADMIN_PASSWORD="$(generate_password)"
     MAILU_WEBSITE="https://$MAILU_DOMAIN"
@@ -173,9 +166,9 @@ install_mailu() {
     echo_run "mv fullchain.pem cert.pem"
     echo_run "systemctl restart nginx"
 
-    # echo_run "cd ../.."
-    # echo_run "docker compose up -d"
-    # _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
+    echo_run "cd ../.."
+    echo_run "docker compose up -d"
+    echo_run "docker compose exec admin flask mailu admin admin $MAIL_DOMAIN $MAILU_ADMIN_PASSWORD"
 }
 
 ACTIONS=(
