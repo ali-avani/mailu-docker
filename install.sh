@@ -140,21 +140,20 @@ _add_mailu_admin() {
     local username=$1
     local password=$2
     dcd mailu
-    echo_run "docker-compose exec admin flask mailu admin $username $MAILU_DOMAIN $password"
+    echo_run "docker-compose exec admin flask mailu admin $username $MAIL_DOMAIN $password"
 }
 
 install_mailu_nginx() {
-    export MAILU_DOMAIN=mail.$DOMAIN
     echo -e "Add the following DNS record to $DOMAIN DNS settings:"
     echo -e "\tType: CNAME"
-    echo -e "\tName: $(get_subdomains $MAILU_DOMAIN)"
+    echo -e "\tName: $(get_subdomains $MAIL_DOMAIN)"
     echo -e "\tValue: $DOMAIN"
     echo "Press enter to continue"
     echo_run "read"
     echo_run "gcfc mailu/nginx.conf > /etc/nginx/sites-available/mailu.conf"
     ln_nginx mailu
-    certbot_expand_nginx $MAILU_DOMAIN
-    echo "URL: https://$MAILU_DOMAIN"
+    certbot_expand_nginx $MAIL_DOMAIN
+    echo "URL: https://$MAIL_DOMAIN"
 }
 
 install_mailu() {
