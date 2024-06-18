@@ -138,7 +138,7 @@ install_nginx() {
 }
 
 install_mailu_nginx() {
-    echo -e "Add the following DNS record to $DOMAIN DNS settings:"
+    echo -e "Add the following DNS record to $(echo -n $DOMAIN | rev | cut -d"." -f1,2 | rev) DNS settings:"
     echo -e "\tType: CNAME"
     echo -e "\tName: $(get_subdomains $MAIL_DOMAIN)"
     echo -e "\tValue: $DOMAIN"
@@ -162,7 +162,6 @@ install_mailu() {
     echo_run "ln_ssl $DOMAIN"
     echo_run "systemctl restart nginx"
 
-    echo_run "cd ../.."
     echo_run "docker compose up -d"
     echo_run "docker compose exec admin flask mailu admin admin $MAIL_MAIN_DOMAIN $MAILU_ADMIN_PASSWORD"
 }
