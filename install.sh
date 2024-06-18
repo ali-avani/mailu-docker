@@ -137,13 +137,6 @@ install_nginx() {
     echo_run "systemctl restart nginx"
 }
 
-_add_mailu_admin() {
-    local username=$1
-    local password=$2
-    dcd mailu
-    echo_run "docker-compose exec admin flask mailu admin $username $MAIL_DOMAIN $password"
-}
-
 install_mailu_nginx() {
     echo -e "Add the following DNS record to $DOMAIN DNS settings:"
     echo -e "\tType: CNAME"
@@ -157,57 +150,33 @@ install_mailu_nginx() {
     echo "URL: https://$MAIL_DOMAIN"
 }
 
-install_mailu() {
-    if ! command -v nginx &>/dev/null; then
-        echo "nginx is not installed. Exiting..."
-        exit
-    fi
+_add_mailu_admin() {
+    local username=$1
+    local password=$2
+    dcd mailu
+    echo_run "docker compose exec admin flask mailu admin $username $MAIL_DOMAIN $password"
+}
 
-    export MAILU_DOMAIN
+install_mailu() {
     MAILU_ADMIN_PASSWORD="$(generate_password)"
     MAILU_WEBSITE="https://$MAILU_DOMAIN"
-    MAILU_SECRET_KEY=$(generate_password 16)
-    MAILU_POSTMASTER=${MAILU_POSTMASTER:-"admin"}
-    DOCKER_COMPOSE_ENVS=(
-        MAILU_HOSTNAMES
-        MAILU_DOMAIN
-        MAILU_POSTMASTER
-        MAILU_SECRET_KEY
-        MAILU_WEBSITE
-        MAILU_HTTP_PORT
-        MAILU_HTTPS_PORT
-    )
+    export MAILU_SECRET_KEY=$(generate_password 16)
 
     dcd mailu
     gcfc mailu/docker-compose.yml >docker-compose.yml
     gcfc mailu/mailu.conf >mailu.conf
     cpc mailu/mailu.env
 
-    for env in "${DOCKER_COMPOSE_ENVS[@]}"; do
-        key="${env#MAILU_}"
-        echo "$key=${!env}" >>mailu.env
-    done
-
-    echo_run "cp mailu.conf /etc/nginx/sites-available/mailu.conf"
-    echo_run "ln_nginx mailu"
-    echo_run "mkdir -p /mailu/certs"
-    echo_run "ln_ssl "/mailu/certs" $MAILU_DOMAIN"
+    echo_run "mkdir -p ./data/certs"
+    echo_run "cd ./data/certs"
+    echo_run "ln_ssl $DOMAIN"
+    echp_run "cp privkey.pem key.pem"
+    echo_run "cp fullchain.pem cert.pem"
     echo_run "systemctl restart nginx"
 
-    echo_run "docker-compose up -d"
-    _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
-}
-
-add_mailu_admin() {
-    echo -n "Enter username: "
-    read MAILU_ADMIN_USERNAME
-
-    echo -n "Enter password: "
-    stty -echo
-    read MAILU_ADMIN_PASSWORD
-    stty echo
-
-    _add_mailu_admin $MAILU_ADMIN_USERNAME $MAILU_ADMIN_PASSWORD
+    # echo_run "cd ../.."
+    # echo_run "docker compose up -d"
+    # _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
 }
 
 ACTIONS=(
@@ -216,7 +185,6 @@ ACTIONS=(
     install_ssl
     install_nginx
     install_mailu
-    add_mailu_admin
 )
 
 while true; do
