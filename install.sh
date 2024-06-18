@@ -173,10 +173,13 @@ create_mailu_user() {
 }
 
 configure_mailu() {
-    echo "Open https://$MAIL_DOMAIN/"
+    MAIL_PANEL_URL="https://$MAIL_DOMAIN"
+    echo "Open $MAIL_PANEL_URL"
     echo "Username: admin@$MAIL_MAIN_DOMAIN"
     echo "Password: [password from create_mailu_user action]"
     echo "Press [Sign in Admin] button"
+    echo "Open $MAIL_PANEL_URL/admin/domains/$MAIL_MAIN_DOMAIN"
+    echo "Enter dns records in DNS settings described in the page"
 }
 
 ACTIONS=(
