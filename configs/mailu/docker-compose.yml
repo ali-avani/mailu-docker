@@ -31,6 +31,8 @@ services:
       - default
       - webmail
     volumes:
+      - "./fullchain.pem:/certs/cert.pem:ro"
+      - "./privkey.pem:/certs/key.pem:ro"
       - "./data/certs:/certs"
       - "./data/overrides/nginx:/overrides:ro"
     depends_on:

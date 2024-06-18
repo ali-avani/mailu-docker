@@ -159,16 +159,12 @@ install_mailu() {
     gcfc mailu/docker-compose.yml >docker-compose.yml
     gcfc mailu/mailu.env >mailu.env
 
-    echo_run "mkdir -p ./data/certs"
-    echo_run "cd ./data/certs"
     echo_run "ln_ssl $DOMAIN"
-    echo_run "mv privkey.pem key.pem"
-    echo_run "mv fullchain.pem cert.pem"
     echo_run "systemctl restart nginx"
 
     echo_run "cd ../.."
     echo_run "docker compose up -d"
-    echo_run "docker compose exec admin flask mailu admin admin $MAIL_DOMAIN $MAILU_ADMIN_PASSWORD"
+    echo_run "docker compose exec admin flask mailu admin admin $MAIL_MAIN_DOMAIN $MAILU_ADMIN_PASSWORD"
 }
 
 ACTIONS=(
@@ -176,6 +172,7 @@ ACTIONS=(
     server_os_upgrade
     install_ssl
     install_nginx
+    install_mailu_nginx
     install_mailu
 )
 
