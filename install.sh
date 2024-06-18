@@ -1,38 +1,26 @@
 #!/bin/bash
 
-if [ ! -f ".env" ]; then
-    echo ".env file does not exist."
-    exit
-fi
-
-REQURIED_ENVS=(
-    MAILU_DOMAIN
-    MAILU_HOSTNAMES
-)
-
-source .env
-for env in "${REQURIED_ENVS[@]}"; do
-    if [ -z "${!env}" ]; then
-        echo "$env is not set."
-        exit
-    fi
-done
-
-export MAILU_HTTP_PORT=${MAILU_HTTP_PORT:-880}
-export MAILU_HTTPS_PORT=${MAILU_HTTPS_PORT:-8443}
-
 function generate_password() {
     local length=${1:-13}
     tr -dc A-Za-z0-9 </dev/urandom | head -c $length
     echo ''
 }
 
+if [ ! -f ".env" ]; then
+    echo ".env file does not exist."
+    exit
+fi
+
+source .env
+
+export MAILU_HTTP_PORT=${MAILU_HTTP_PORT:-880}
+export MAILU_HTTPS_PORT=${MAILU_HTTPS_PORT:-8443}
+
 # Varibales
 export PUBLIC_IP=$(curl -s ifconfig.me)
 export REMARK_PREFIX=$(echo $DOMAIN | cut -d '.' -f1)
 
 # SCRIPT SETUP
-
 export PROJECT_PATH="$(dirname $(realpath "$0"))"
 cd "$PROJECT_PATH" || exit
 
@@ -44,7 +32,6 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # UTILITY FUNCTIONS
-
 export TERMINAL_COLUMNS="$(stty -a 2>/dev/null | grep -Po '(?<=columns )\d+' || echo 0)"
 
 print_separator() {
@@ -72,7 +59,7 @@ echo_run() {
 
 function gcf() {
     export GCF_ED="$"
-    envsubst < $1
+    envsubst <$1
 }
 
 function gcfc() {
@@ -94,9 +81,7 @@ function certbot_expand_nginx() {
 }
 
 function ln_ssl() {
-    DESTINATION=${1:-.}
-    DOMAIN=$2
-    echo_run "ln -fs /etc/letsencrypt/live/$DOMAIN/{fullchain.pem,privkey.pem} $DESTINATION"
+    echo_run "ln -fs /etc/letsencrypt/live/$DOMAIN/{fullchain.pem,privkey.pem} ."
 }
 
 function dcd() {
@@ -119,14 +104,7 @@ function get_subdomains() {
 }
 
 function ln_nginx() {
-    echo_run "rm -f /etc/nginx/sites-enabled/$1.conf"
-    echo_run "ln -s /etc/nginx/sites-available/$1.conf /etc/nginx/sites-enabled/"
-}
-
-function join_array() {
-    local IFS="$1"
-    shift
-    echo "$*"
+    echo_run "ln -fs /etc/nginx/sites-available/$1.conf /etc/nginx/sites-enabled/"
 }
 
 # ACTIONS
@@ -135,13 +113,7 @@ server_initial_setup() {
     echo_run "ln -fs /usr/share/zoneinfo/Asia/Tehran /etc/localtime"
     echo_run "dpkg-reconfigure -f noninteractive tzdata"
     echo_run "apt update -y"
-    echo_run "apt install -y apg tmux vim net-tools docker.io"
-
-    DOCKER_COMPOSE_VERSION=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*\d')
-    DOCKER_COMPOSE_DESTINATION="/usr/local/bin/docker-compose"
-    echo_run "curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m) -o $DOCKER_COMPOSE_DESTINATION"
-    echo_run "chmod 755 $DOCKER_COMPOSE_DESTINATION"
-
+    echo_run "apt install -y apg tmux vim net-tools docker.io docker-compose-v2"
     echo_run "apt full-upgrade -y"
     echo_run "apt autoremove -y"
     echo_run "sleep 5"
@@ -161,31 +133,33 @@ _add_mailu_admin() {
     echo_run "docker-compose exec admin flask mailu admin $username $MAILU_DOMAIN $password"
 }
 
-_install_ssl() {
+install_ssl() {
     echo_run "apt install certbot python3-certbot-nginx -y"
-    DOMAIN=$1
-    CERTBOT_EMAIL=$2
-    
     echo_run "certbot certonly -d $DOMAIN --email $CERTBOT_EMAIL --standalone --agree-tos --noninteractive"
 }
 
 install_nginx() {
-    echo_run "apt install nginx -y"
+    echo_run "apt install nginx python3-certbot-nginx -y"
+    certbot_expand_nginx $DOMAIN
     echo_run "systemctl restart nginx"
 }
 
-install_ssl() {
-    echo -n "Enter domain: "
-    read DOMAIN
-
-    echo -n "Enter email: "
-    read CERTBOT_EMAIL
-
-    _install_ssl $DOMAIN $CERTBOT_EMAIL
+install_mailu_nginx() {
+    export MAILU_DOMAIN=mail.$DOMAIN
+    echo -e "Add the following DNS record to $DOMAIN DNS settings:"
+    echo -e "\tType: CNAME"
+    echo -e "\tName: $(get_subdomains $MAILU_DOMAIN)"
+    echo -e "\tValue: $DOMAIN"
+    echo "Press enter to continue"
+    echo_run "read"
+    echo_run "gcfc mailu/nginx.conf > /etc/nginx/sites-available/mailu.conf"
+    ln_nginx mailu
+    certbot_expand_nginx $MAILU_DOMAIN
+    echo "URL: https://$MAILU_DOMAIN"
 }
 
 install_mailu() {
-    if ! command -v nginx &> /dev/null; then
+    if ! command -v nginx &>/dev/null; then
         echo "nginx is not installed. Exiting..."
         exit
     fi
@@ -206,13 +180,13 @@ install_mailu() {
     )
 
     dcd mailu
-    gcfc mailu/docker-compose.yml > docker-compose.yml
-    gcfc mailu/mailu.conf > mailu.conf
+    gcfc mailu/docker-compose.yml >docker-compose.yml
+    gcfc mailu/mailu.conf >mailu.conf
     cpc mailu/mailu.env
 
     for env in "${DOCKER_COMPOSE_ENVS[@]}"; do
         key="${env#MAILU_}"
-        echo "$key=${!env}" >> mailu.env
+        echo "$key=${!env}" >>mailu.env
     done
 
     echo_run "cp mailu.conf /etc/nginx/sites-available/mailu.conf"

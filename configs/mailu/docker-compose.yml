@@ -1,190 +1,190 @@
 services:
-    redis:
-        image: redis:alpine
-        restart: always
-        volumes:
-            - "/mailu/redis:/data"
-        depends_on:
-            - resolver
-        dns:
-            - 192.168.203.254
+  redis:
+    image: redis:alpine
+    restart: always
+    volumes:
+      - "./data/redis:/data"
+    depends_on:
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    front:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}nginx:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        logging:
-            driver: journald
-            options:
-                tag: mailu-front
-        ports:
-            - "$MAILU_HTTP_PORT:80"
-            - "$MAILU_HTTPS_PORT:443"
-            - "25:25"
-            - "465:465"
-            - "587:587"
-            - "110:110"
-            - "995:995"
-            - "143:143"
-            - "993:993"
-            - "4190:4190"
-        networks:
-            - default
-            - webmail
-        volumes:
-            - "/mailu/certs:/certs"
-            - "/mailu/overrides/nginx:/overrides:ro"
-        depends_on:
-            - resolver
-        dns:
-            - 192.168.203.254
+  front:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}nginx:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-front
+    ports:
+      - "$MAILU_HTTP_PORT:80"
+      - "$MAILU_HTTPS_PORT:443"
+      - "25:25"
+      - "465:465"
+      - "587:587"
+      - "110:110"
+      - "995:995"
+      - "143:143"
+      - "993:993"
+      - "4190:4190"
+    networks:
+      - default
+      - webmail
+    volumes:
+      - "./data/certs:/certs"
+      - "./data/overrides/nginx:/overrides:ro"
+    depends_on:
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    resolver:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}unbound:${GCF_ED}{MAILU_VERSION:-2.0}
-        env_file: mailu.env
-        logging:
-            driver: journald
-            options:
-                tag: mailu-resolver
-        restart: always
-        networks:
-            default:
-                ipv4_address: 192.168.203.254
+  resolver:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}unbound:${GCF_ED}{MAILU_VERSION:-2.0}
+    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-resolver
+    restart: always
+    networks:
+      default:
+        ipv4_address: 192.168.203.254
 
-    admin:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}admin:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        logging:
-            driver: journald
-            options:
-                tag: mailu-admin
-        volumes:
-            - "/mailu/data:/data"
-            - "/mailu/dkim:/dkim"
-        depends_on:
-            - redis
-            - resolver
-        dns:
-            - 192.168.203.254
+  admin:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}admin:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-admin
+    volumes:
+      - "./data/data:/data"
+      - "./data/dkim:/dkim"
+    depends_on:
+      - redis
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    imap:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}dovecot:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        logging:
-            driver: journald
-            options:
-                tag: mailu-imap
-        volumes:
-            - "/mailu/mail:/mail"
-            - "/mailu/overrides/dovecot:/overrides:ro"
-        networks:
-            - default
-        depends_on:
-            - front
-            - resolver
-        dns:
-            - 192.168.203.254
+  imap:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}dovecot:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-imap
+    volumes:
+      - "./data/mail:/mail"
+      - "./data/overrides/dovecot:/overrides:ro"
+    networks:
+      - default
+    depends_on:
+      - front
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    smtp:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}postfix:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        logging:
-            driver: journald
-            options:
-                tag: mailu-smtp
-        volumes:
-            - "/mailu/mailqueue:/queue"
-            - "/mailu/overrides/postfix:/overrides:ro"
-        depends_on:
-            - front
-            - resolver
-        dns:
-            - 192.168.203.254
+  smtp:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}postfix:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-smtp
+    volumes:
+      - "./data/mailqueue:/queue"
+      - "./data/overrides/postfix:/overrides:ro"
+    depends_on:
+      - front
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    oletools:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}oletools:${GCF_ED}{MAILU_VERSION:-2.0}
-        hostname: oletools
-        restart: always
-        networks:
-            - noinet
-        depends_on:
-            - resolver
-        dns:
-            - 192.168.203.254
+  oletools:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}oletools:${GCF_ED}{MAILU_VERSION:-2.0}
+    hostname: oletools
+    restart: always
+    networks:
+      - noinet
+    depends_on:
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    antispam:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}rspamd:${GCF_ED}{MAILU_VERSION:-2.0}
-        hostname: antispam
-        restart: always
-        env_file: mailu.env
-        logging:
-            driver: journald
-            options:
-                tag: mailu-antispam
-        networks:
-            - default
-            - noinet
-        volumes:
-            - "/mailu/filter:/var/lib/rspamd"
-            - "/mailu/overrides/rspamd:/overrides:ro"
-        depends_on:
-            - front
-            - redis
-            - oletools
-            - antivirus
-            - resolver
-        dns:
-            - 192.168.203.254
+  antispam:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}rspamd:${GCF_ED}{MAILU_VERSION:-2.0}
+    hostname: antispam
+    restart: always
+    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-antispam
+    networks:
+      - default
+      - noinet
+    volumes:
+      - "./data/filter:/var/lib/rspamd"
+      - "./data/overrides/rspamd:/overrides:ro"
+    depends_on:
+      - front
+      - redis
+      - oletools
+      - antivirus
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    antivirus:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}clamav:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        volumes:
-            - "/mailu/filter:/data"
-        depends_on:
-            - resolver
-        dns:
-            - 192.168.203.254
+  antivirus:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}clamav:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/filter:/data"
+    depends_on:
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    fetchmail:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}fetchmail:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        volumes:
-            - "/mailu/data/fetchmail:/data"
-        depends_on:
-            - admin
-            - smtp
-            - imap
-            - resolver
-        dns:
-            - 192.168.203.254
+  fetchmail:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}fetchmail:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/data/fetchmail:/data"
+    depends_on:
+      - admin
+      - smtp
+      - imap
+      - resolver
+    dns:
+      - 192.168.203.254
 
-    webmail:
-        image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}webmail:${GCF_ED}{MAILU_VERSION:-2.0}
-        restart: always
-        env_file: mailu.env
-        volumes:
-            - "/mailu/webmail:/data"
-            - "/mailu/overrides/snappymail:/overrides:ro"
-        networks:
-            - webmail
-        depends_on:
-            - front
+  webmail:
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}webmail:${GCF_ED}{MAILU_VERSION:-2.0}
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/webmail:/data"
+      - "./data/overrides/snappymail:/overrides:ro"
+    networks:
+      - webmail
+    depends_on:
+      - front
 
 networks:
-    default:
-        driver: bridge
-        ipam:
-            driver: default
-            config:
-                - subnet: 192.168.203.0/24
-    webmail:
-        driver: bridge
-    noinet:
-        driver: bridge
-        internal: true
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.203.0/24
+  webmail:
+    driver: bridge
+  noinet:
+    driver: bridge
+    internal: true
