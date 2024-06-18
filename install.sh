@@ -170,7 +170,7 @@ install_mailu() {
     echo_run "mkdir -p ./data/certs"
     echo_run "cd ./data/certs"
     echo_run "ln_ssl $DOMAIN"
-    echp_run "cp privkey.pem key.pem"
+    echo_run "cp privkey.pem key.pem"
     echo_run "cp fullchain.pem cert.pem"
     echo_run "systemctl restart nginx"
 
