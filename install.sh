@@ -183,9 +183,9 @@ install_ssl() {
 }
 
 install_mailu() {
-    if [ ! -f /etc/nginx/sites-available/default ]; then
-        echo "Nginx is not installed. Please install it first."
-        return
+    if ! command -v nginx &> /dev/null; then
+        echo "nginx is not installed. Exiting..."
+        exit
     fi
 
     export MAILU_DOMAIN
@@ -214,12 +214,10 @@ install_mailu() {
     done
 
     echo_run "cp mailu.conf /etc/nginx/sites-available/mailu.conf"
-    echo_run "cp /etc/letsencrypt/live/$MAILU_DOMAIN/fullchain.pem /etc/letsencrypt/live/$MAILU_DOMAIN/privkey.pem /mailu/certs"
+    echo_run "systemctl restart nginx"
+
     echo_run "docker-compose up -d"
     _add_mailu_admin "admin" $MAILU_ADMIN_PASSWORD
-    ln_nginx mailu
-
-    echo_run "systemctl restart nginx"
 }
 
 add_mailu_admin() {

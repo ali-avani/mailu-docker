@@ -20,6 +20,7 @@ services:
         ports:
             - "$MAILU_HTTP_PORT:80"
             - "$MAILU_HTTPS_PORT:443"
+            - "8008:8008"
         networks:
             - default
             - webmail
