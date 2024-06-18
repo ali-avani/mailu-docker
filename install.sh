@@ -12,6 +12,7 @@ if [ ! -f ".env" ]; then
 fi
 
 source .env
+source .ports
 
 export MAILU_HTTP_PORT=${MAILU_HTTP_PORT:-880}
 export MAILU_HTTPS_PORT=${MAILU_HTTPS_PORT:-8443}
