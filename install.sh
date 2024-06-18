@@ -178,7 +178,7 @@ configure_mailu() {
     echo "Username: admin@$MAIL_MAIN_DOMAIN"
     echo "Password: [password from create_mailu_user action]"
     echo "Press [Sign in Admin] button"
-    echo "Open $MAIL_PANEL_URL/admin/domains/$MAIL_MAIN_DOMAIN"
+    echo "Open $MAIL_PANEL_URL/admin/domain/details/$MAIL_MAIN_DOMAIN"
     echo "Enter dns records in DNS settings described in the page"
 }
 
