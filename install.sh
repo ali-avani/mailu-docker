@@ -164,7 +164,6 @@ install_mailu() {
 
     dcd mailu
     gcfc mailu/docker-compose.yml >docker-compose.yml
-    gcfc mailu/mailu.conf >mailu.conf
     cpc mailu/mailu.env
 
     echo_run "mkdir -p ./data/certs"
