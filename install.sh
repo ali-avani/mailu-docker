@@ -94,7 +94,9 @@ function certbot_expand_nginx() {
 }
 
 function ln_ssl() {
-    echo_run "ln -s /etc/letsencrypt/live/$DOMAIN/{fullchain.pem,privkey.pem} ."
+    DESTINATION=${1:-.}
+    DOMAIN=$2
+    echo_run "ln -fs /etc/letsencrypt/live/$DOMAIN/{fullchain.pem,privkey.pem} $DESTINATION"
 }
 
 function dcd() {
@@ -160,7 +162,7 @@ _add_mailu_admin() {
 }
 
 _install_ssl() {
-    echo_run "apt install certbot -y"
+    echo_run "apt install certbot python3-certbot-nginx -y"
     DOMAIN=$1
     CERTBOT_EMAIL=$2
     
@@ -214,6 +216,9 @@ install_mailu() {
     done
 
     echo_run "cp mailu.conf /etc/nginx/sites-available/mailu.conf"
+    echo_run "ln_nginx mailu"
+    echo_run "mkdir -p /mailu/certs"
+    echo_run "ln_ssl "/mailu/certs" $MAILU_DOMAIN"
     echo_run "systemctl restart nginx"
 
     echo_run "docker-compose up -d"
