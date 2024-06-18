@@ -10,7 +10,7 @@ services:
       - 192.168.203.254
 
   front:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}nginx:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}nginx:${GCF_ED}{MAILU_VERSION:-2024.06}
     restart: always
     env_file: mailu.env
     logging:
@@ -39,7 +39,7 @@ services:
       - 192.168.203.254
 
   resolver:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}unbound:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}unbound:${GCF_ED}{MAILU_VERSION:-2024.06}
     env_file: mailu.env
     logging:
       driver: journald
@@ -51,7 +51,7 @@ services:
         ipv4_address: 192.168.203.254
 
   admin:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}admin:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}admin:${GCF_ED}{MAILU_VERSION:-2024.06}
     restart: always
     env_file: mailu.env
     logging:
@@ -68,7 +68,7 @@ services:
       - 192.168.203.254
 
   imap:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}dovecot:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}dovecot:${GCF_ED}{MAILU_VERSION:-2024.06}
     restart: always
     env_file: mailu.env
     logging:
@@ -106,16 +106,20 @@ services:
   oletools:
     image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}oletools:${GCF_ED}{MAILU_VERSION:-2.0}
     hostname: oletools
+    logging:
+      driver: journald
+      options:
+        tag: mailu-oletools
     restart: always
     networks:
-      - noinet
+      - oletools
     depends_on:
       - resolver
     dns:
       - 192.168.203.254
 
   antispam:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}rspamd:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}rspamd:${GCF_ED}{MAILU_VERSION:-2024.06}
     hostname: antispam
     restart: always
     env_file: mailu.env
@@ -125,7 +129,8 @@ services:
         tag: mailu-antispam
     networks:
       - default
-      - noinet
+      - oletools
+      - clamav
     volumes:
       - "./data/filter:/var/lib/rspamd"
       - "./data/overrides/rspamd:/overrides:ro"
@@ -139,34 +144,31 @@ services:
       - 192.168.203.254
 
   antivirus:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}clamav:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: clamav/clamav-debian:1.2.0-6
     restart: always
-    env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-antivirus
+    networks:
+      - clamav
     volumes:
-      - "./data/filter:/data"
-    depends_on:
-      - resolver
-    dns:
-      - 192.168.203.254
-
-  fetchmail:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}fetchmail:${GCF_ED}{MAILU_VERSION:-2.0}
-    restart: always
-    env_file: mailu.env
-    volumes:
-      - "./data/data/fetchmail:/data"
-    depends_on:
-      - admin
-      - smtp
-      - imap
-      - resolver
-    dns:
-      - 192.168.203.254
+      - "./data/filter/clamav:/var/lib/clamav"
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 `cat /tmp/clamd.pid` && kill -0 `cat /tmp/freshclam.pid`"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   webmail:
-    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}webmail:${GCF_ED}{MAILU_VERSION:-2.0}
+    image: ${GCF_ED}{DOCKER_ORG:-ghcr.io/mailu}/${GCF_ED}{DOCKER_PREFIX:-}webmail:${GCF_ED}{MAILU_VERSION:-2024.06}
     restart: always
     env_file: mailu.env
+    logging:
+      driver: journald
+      options:
+        tag: mailu-webmail
     volumes:
       - "./data/webmail:/data"
       - "./data/overrides/snappymail:/overrides:ro"
@@ -184,6 +186,8 @@ networks:
         - subnet: 192.168.203.0/24
   webmail:
     driver: bridge
-  noinet:
+  clamav:
+    driver: bridge
+  oletools:
     driver: bridge
     internal: true
